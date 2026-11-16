@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1b5e20">
+<meta name="mobile-web-app-capable" content="yes">
+<title>GCP Campo - locais para alvos</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--verde:#1b5e20;--verde2:#2e7d32;--claro:#e8f5e9;--borda:#c8d6c9;--txt:#1d2a1f;--vermelho:#c62828;--azul:#1565c0;--laranja:#ef6c00}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--txt);background:#f4f7f4;font-size:16px}
+header{background:var(--verde);color:#fff;padding:12px 14px;position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px}
+header h1{font-size:18px;margin:0;flex:1}
+header small{opacity:.85;font-size:12px}
+main{padding:10px;max-width:900px;margin:0 auto}
+section{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:12px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 8px;color:var(--verde)}
+button,.btn{font:inherit;border:0;border-radius:8px;padding:11px 14px;background:var(--verde2);color:#fff;cursor:pointer;min-height:44px}
+button.sec{background:#fff;color:var(--verde);border:1.5px solid var(--verde2)}
+button.perigo{background:#fff;color:var(--vermelho);border:1.5px solid var(--vermelho)}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1 1 auto}
+input,select{font:inherit;padding:10px;border:1px solid var(--borda);border-radius:8px;width:100%;background:#fff;min-height:44px}
+input[type=checkbox]{width:22px;height:22px;min-height:0}
+label{font-size:13px;color:#4a5a4c;display:block;margin:6px 0 3px}
+.res{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.card{background:var(--claro);border-radius:8px;padding:10px;text-align:center}
+.card b{display:block;font-size:21px;color:var(--verde)}
+.card span{font-size:12px;color:#4a5a4c}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid #e3ebe4;padding:7px 4px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{background:#f0f5f0;font-size:12px;color:#4a5a4c;position:sticky;top:0}
+tr.sel td{background:#fff8e1}
+td button{min-height:34px;padding:4px 10px}
+.tabwrap{overflow:auto;max-height:360px;border:1px solid #e3ebe4;border-radius:8px}
+.aviso{background:#fff3e0;border-left:4px solid var(--laranja);padding:8px 10px;border-radius:6px;font-size:14px;margin:8px 0}
+.ok{background:var(--claro);border-left:4px solid var(--verde2);padding:8px 10px;border-radius:6px;font-size:14px;margin:8px 0}
+svg{width:100%;height:auto;background:#fbfdfb;border:1px solid #e3ebe4;border-radius:8px;touch-action:manipulation;display:block}
+.muted{color:#6a786c;font-size:13px}
+details summary{cursor:pointer;color:var(--verde);font-weight:600;padding:4px 0}
+.pol{display:flex;gap:8px;align-items:center;border:1px solid #e3ebe4;border-radius:8px;padding:6px 8px;margin:4px 0}
+.pol span{flex:1;font-size:14px}
+.pol select{flex:0 0 130px;min-height:38px;padding:6px}
+.nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:8px}
+.nav .card b{color:var(--azul)}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#263238;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;display:none;z-index:20}
+ul{padding-left:20px;margin:6px 0}
+li{margin:3px 0;font-size:14px}
+</style>
+</head>
+<body>
+<header><h1>GCP Campo <small>offline · SIRGAS 2000 / UTM</small></h1><button id="btnInstalar" style="display:none;background:#fff;color:#1b5e20;padding:8px 12px;min-height:38px">Instalar</button></header>
+<main>
+
+<section>
+  <h2>1. Área do voo</h2>
+  <div class="row">
+    <label class="btn" style="text-align:center;flex:1 1 160px">Abrir KML / KMZ<input type="file" id="arq" accept=".kml,.kmz,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz" style="display:none"></label>
+    <label class="btn" style="text-align:center;flex:1 1 160px;background:#fff;color:var(--verde);border:1.5px solid var(--verde2)">Somar áreas a evitar<input type="file" id="arqEvitar" accept=".kml,.kmz,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz" style="display:none"></label>
+  </div>
+  <p class="muted">Abra o polígono do voo (Google Earth, QGIS, SIGMINE...). Se o arquivo tiver vários polígonos, escolha o papel de cada um. Polígonos marcados como <b>Evitar</b> (mata, cava ativa, açude, galpão, pátio de máquinas) não recebem alvos.</p>
+  <div id="msgArq"></div>
+  <div id="listaPols"></div>
+</section>
+
+<section id="secPar" style="display:none">
+  <h2>2. Alvos e voo</h2>
+  <div class="row">
+    <div style="flex:1 1 120px"><label>Nº de alvos (GCPs)</label><input id="pN" type="number" min="3" max="60" value="5" inputmode="numeric"></div>
+    <div style="flex:1 1 120px"><label>Pontos de checagem</label><input id="pChk" type="number" min="0" max="30" value="0" inputmode="numeric"></div>
+    <div style="flex:1 1 120px"><label>Lado do alvo (m)</label><input id="pLado" value="0,98" inputmode="decimal"></div>
+  </div>
+  <div class="row">
+    <div style="flex:1 1 120px"><label>Margem da borda (m)</label><input id="pMargem" value="10" inputmode="decimal"></div>
+    <div style="flex:1 1 120px"><label>Afastar das áreas evitadas (m)</label><input id="pEvitar" value="10" inputmode="decimal"></div>
+    <div style="flex:1 1 120px"><label>Declividade máx. (graus)</label><input id="pDecl" value="20" inputmode="decimal"></div>
+  </div>
+  <div class="row">
+    <div style="flex:2 1 200px"><label>Câmera</label><select id="pCam">
+      <option value="mini">DJI Mini SE / Mini 2 (1/2,3")</option>
+      <option value="p4p">DJI Phantom 4 Pro (1")</option>
+      <option value="custom">Outra (digitar)</option>
+    </select></div>
+    <div style="flex:1 1 120px"><label>Altura de voo (m)</label><input id="pAlt" value="100" inputmode="decimal"></div>
+  </div>
+  <div id="boxCam" class="row" style="display:none">
+    <div style="flex:1 1 110px"><label>Largura do sensor (mm)</label><input id="cSensor" value="6,17" inputmode="decimal"></div>
+    <div style="flex:1 1 110px"><label>Distância focal (mm)</label><input id="cFocal" value="4,49" inputmode="decimal"></div>
+    <div style="flex:1 1 110px"><label>Largura da foto (px)</label><input id="cPx" value="4000" inputmode="numeric"></div>
+  </div>
+  <div id="msgGsd" class="muted" style="margin-top:6px"></div>
+
+  <details style="margin-top:8px"><summary>Relevo (opcional, precisa de internet)</summary>
+    <p class="muted">Busca altitudes do Copernicus DEM GLO-90 (90 m) pela API do Open-Meteo para evitar encostas íngremes e distribuir os alvos entre partes altas e baixas. Os valores ficam salvos no aparelho: dá para buscar no escritório e usar offline no campo. É uma altitude aproximada, só para planejar.</p>
+    <div class="row"><button class="sec" id="btnRelevo">Buscar relevo</button><button class="perigo" id="btnSemRelevo" style="flex:0 1 auto">Apagar relevo</button></div>
+    <div id="msgRelevo" class="muted" style="margin-top:6px">Sem relevo carregado: os alvos são distribuídos só pela forma da área.</div>
+  </details>
+
+  <div class="row" style="margin-top:10px"><button id="btnCalc">Calcular locais dos alvos</button></div>
+</section>
+
+<section id="secRes" style="display:none">
+  <h2>3. Locais sugeridos</h2>
+  <div class="res">
+    <div class="card"><b id="rHa">–</b><span>hectares</span></div>
+    <div class="card"><b id="rHaGcp">–</b><span>ha por alvo</span></div>
+    <div class="card"><b id="rViz">–</b><span>entre vizinhos (m)</span></div>
+    <div class="card"><b id="rPx">–</b><span>pixels no alvo</span></div>
+  </div>
+  <div id="rAviso"></div>
+  <svg id="mapa" viewBox="0 0 600 420"></svg>
+  <p class="muted" id="dicaMapa">Toque num ponto da tabela e depois no mapa para mudar o lugar dele (ponto ruim no campo). O ponto movido fica fixo; "Recalcular" redistribui os outros em volta.</p>
+  <div class="tabwrap"><table id="tabRes"><thead><tr><th>Alvo</th><th>E</th><th>N</th><th>Alt.</th><th>Viz. (m)</th><th>Fixo</th><th></th></tr></thead><tbody></tbody></table></div>
+  <div class="row" style="margin-top:8px">
+    <button class="sec" id="btnRecalc">Recalcular (mantém fixos)</button>
+    <button class="sec" id="btnCsv">Salvar CSV (coletora)</button>
+    <button class="sec" id="btnKml">Salvar KML</button>
+    <button class="sec" id="btnCopiar">Copiar</button>
+  </div>
+</section>
+
+<section id="secNav" style="display:none">
+  <h2>4. Ir até o alvo (GPS do aparelho)</h2>
+  <div class="row">
+    <div style="flex:2 1 160px"><label>Alvo</label><select id="navAlvo"></select></div>
+    <button id="btnGps" style="flex:1 1 140px;align-self:flex-end">Ligar GPS</button>
+  </div>
+  <div class="nav">
+    <div class="card"><b id="nDist">–</b><span>distância (m)</span></div>
+    <div class="card"><b id="nAz">–</b><span>azimute</span></div>
+    <div class="card"><b id="nPrec">–</b><span>precisão GPS (m)</span></div>
+  </div>
+  <p class="muted">Funciona sem internet. O GPS do celular erra 3 a 5 m: serve para achar o local. A coordenada que vale é a medida no centro do alvo com o RTK.</p>
+</section>
+
+<section>
+  <details><summary>Boas práticas para os alvos</summary>
+    <ul>
+      <li>Distribua os alvos nas bordas e no meio da área, nunca todos em linha. Os pontos das pontas seguram a escala e a rotação, e o do meio segura o "abaulamento" do modelo.</li>
+      <li>Cubra as partes mais altas e mais baixas do terreno: é isso que controla a altimetria do MDT.</li>
+      <li>Fique dentro da área fotografada, pelo menos 2 ou 3 faixas de voo para dentro da borda (a margem cuida disso).</li>
+      <li>Céu aberto e chão firme: longe de árvores, postes, paredes e sombra. Alvo esticado, plano e preso (pedra ou estaca nos ilhós).</li>
+      <li>Meça o centro do X com o RTK em solução FIXED, de preferência com várias épocas, antes ou depois do voo, sem mexer no alvo.</li>
+      <li>O alvo deve ocupar pelo menos 10 a 15 pixels na foto. O app calcula isso pela câmera e altura de voo.</li>
+      <li>Pontos de checagem não entram no processamento: servem para medir o erro real do modelo no fim.</li>
+    </ul>
+  </details>
+  <p class="muted" style="margin-top:8px">Os cálculos são planos em UTM (SIRGAS 2000), feitos no próprio aparelho. Nenhum arquivo sai do celular.</p>
+</section>
+</main>
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ---------------- estado ----------------
+let POLS = [];      // {nome, pts:[{E,N}], papel:'voo'|'evitar'|'nao'}
+let ZONA = null;
+let RES = null;     // {pts:[{nome,E,N,h,fixo,tipo}], area, ...}
+let ELEV = null;    // {chave, x0,y0,dx,dy,nx,ny,z:[]}
+let SEL = -1;       // índice do alvo selecionado
+let GPS = null;     // {E,N,acc}
+let watchId = null;
+const $ = id => document.getElementById(id);
+const br = (v, d = 2) => (isFinite(v) ? v.toLocaleString('pt-BR', {minimumFractionDigits: d, maximumFractionDigits: d}) : '–');
+function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display='none',2600);}
+function num(s){
+  if(s==null) return NaN; s=String(s).trim().replace(/\s/g,'');
+  if(s.includes(',')&&s.includes('.')) s=s.replace(/\./g,'').replace(',', '.');
+  else if(s.includes(',')) s=s.replace(',', '.');
+  return parseFloat(s);
+}
+const CAMPOS = ['pN','pChk','pLado','pMargem','pEvitar','pDecl','pCam','pAlt','cSensor','cFocal','cPx'];
+function salvar(){
+  try{
+    const par={}; CAMPOS.forEach(k=>par[k]=$(k).value);
+    localStorage.setItem('gcpCampo',JSON.stringify({POLS,ZONA,RES,ELEV,par}));
+  }catch(e){}
+}
+function carregar(){
+  try{
+    const s=JSON.parse(localStorage.getItem('gcpCampo')||'null'); if(!s) return;
+    POLS=s.POLS||[]; ZONA=s.ZONA||null; RES=s.RES||null; ELEV=s.ELEV||null;
+    if(s.par) CAMPOS.forEach(k=>{ if(s.par[k]!=null) $(k).value=s.par[k]; });
+  }catch(e){}
+}
+
+// ---------------- coordenadas (GRS80 ≈ SIRGAS 2000) ----------------
+const A_ELIP=6378137, F_ELIP=1/298.257222101, K0=0.9996;
+function geoUtm(lat, lon, zona){
+  const a=A_ELIP, e2=F_ELIP*(2-F_ELIP), ep2=e2/(1-e2);
+  const L0=((zona-1)*6-180+3)*Math.PI/180, phi=lat*Math.PI/180, lam=lon*Math.PI/180;
+  const N=a/Math.sqrt(1-e2*Math.sin(phi)**2), T=Math.tan(phi)**2, C=ep2*Math.cos(phi)**2, A=Math.cos(phi)*(lam-L0);
+  const M=a*((1-e2/4-3*e2**2/64-5*e2**3/256)*phi-(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*phi)+(15*e2**2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+  const E=K0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120)+500000;
+  let Nn=K0*(M+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
+  if(lat<0) Nn+=10000000;
+  return [E,Nn];
+}
+function utmGeo(E, N, zona, sul=true){
+  const a=A_ELIP, e2=F_ELIP*(2-F_ELIP), ep2=e2/(1-e2), e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  const x=E-500000, y=sul?N-10000000:N;
+  const M=y/K0, mu=M/(a*(1-e2/4-3*e2**2/64-5*e2**3/256));
+  const phi1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1**2/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+  const N1=a/Math.sqrt(1-e2*Math.sin(phi1)**2), T1=Math.tan(phi1)**2, C1=ep2*Math.cos(phi1)**2, R1=a*(1-e2)/Math.pow(1-e2*Math.sin(phi1)**2,1.5), D=x/(N1*K0);
+  const lat=phi1-(N1*Math.tan(phi1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+  const L0=((zona-1)*6-180+3)*Math.PI/180;
+  const lon=L0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/Math.cos(phi1);
+  return [lat*180/Math.PI, lon*180/Math.PI];
+}
+function azimTxt(z){ if(z<0) z+=360; const g=Math.floor(z), m=Math.floor((z-g)*60); return `${g}°${String(m).padStart(2,'0')}'`; }
+
+// ---------------- leitura KML / KMZ ----------------
+function lerKML(xmlTxt){
+  const doc=new DOMParser().parseFromString(xmlTxt,'application/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('KML inválido');
+  const tag=(el,n)=>Array.from(el.getElementsByTagNameNS('*',n));
+  const coords=t=>t.trim().split(/\s+/).map(c=>c.split(',').map(Number)).filter(c=>c.length>=2&&isFinite(c[0])&&isFinite(c[1]));
+  const lista=[];
+  tag(doc,'Placemark').forEach((pm,ip)=>{
+    const nomeEl=Array.from(pm.children).find(c=>c.localName==='name');
+    const nomePm=(nomeEl?nomeEl.textContent:`Polígono ${ip+1}`).trim()||`Polígono ${ip+1}`;
+    tag(pm,'Polygon').forEach((pg,k)=>{
+      const ob=tag(pg,'outerBoundaryIs')[0]||pg;
+      const c=coords((tag(ob,'coordinates')[0]||{}).textContent||'');
+      if(c.length>=3) lista.push({nome:nomePm+(k?` (${k+1})`:''), ll:c});
+      // furos (innerBoundaryIs) viram áreas a evitar
+      tag(pg,'innerBoundaryIs').forEach((ib,j)=>{ const ci=coords((tag(ib,'coordinates')[0]||{}).textContent||''); if(ci.length>=3) lista.push({nome:`${nomePm} – furo ${j+1}`, ll:ci, furo:true}); });
+    });
+  });
+  return lista;
+}
+async function kmzParaTexto(buf){
+  const dv=new DataView(buf); let eocd=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-66000);i--){ if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;} }
+  if(eocd<0) throw new Error('arquivo KMZ corrompido');
+  const n=dv.getUint16(eocd+10,true); let off=dv.getUint32(eocd+16,true); const dec=new TextDecoder('utf-8'); let alvo=null;
+  for(let k=0;k<n;k++){
+    const met=dv.getUint16(off+10,true), csize=dv.getUint32(off+20,true), nl=dv.getUint16(off+28,true), xl=dv.getUint16(off+30,true), cl=dv.getUint16(off+32,true), loc=dv.getUint32(off+42,true);
+    const nome=dec.decode(new Uint8Array(buf,off+46,nl));
+    if(/\.kml$/i.test(nome) && (!alvo || /doc\.kml$/i.test(nome))) alvo={met,csize,loc};
+    off+=46+nl+xl+cl;
+  }
+  if(!alvo) throw new Error('não há arquivo .kml dentro do KMZ');
+  const lnl=dv.getUint16(alvo.loc+26,true), lxl=dv.getUint16(alvo.loc+28,true);
+  const dados=new Uint8Array(buf, alvo.loc+30+lnl+lxl, alvo.csize);
+  if(alvo.met===0) return dec.decode(dados);
+  if(alvo.met===8){
+    if(typeof DecompressionStream==='undefined') throw new Error('este navegador não descompacta KMZ; atualize o Chrome ou salve como KML');
+    const st=new Blob([dados]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return await new Response(st).text();
+  }
+  throw new Error('compressão do KMZ não suportada');
+}
+async function abrirArquivo(f, somarEvitar){
+  try{
+    const ext=(f.name.split('.').pop()||'').toLowerCase();
+    const txt = ext==='kmz' ? await kmzParaTexto(await f.arrayBuffer()) : await f.text();
+    const lista=lerKML(txt);
+    if(!lista.length) throw new Error('não encontrei polígonos no arquivo');
+    if(!somarEvitar || !ZONA){ ZONA=Math.floor((lista[0].ll[0][0]+180)/6)+1; }
+    const novos=lista.map(p=>{
+      const pts=p.ll.map(c=>{const u=geoUtm(c[1],c[0],ZONA); return {E:u[0],N:u[1]};});
+      if(pts.length>3){ const a=pts[0], b=pts[pts.length-1]; if(Math.hypot(a.E-b.E,a.N-b.N)<1e-6) pts.pop(); }
+      return {nome:p.nome, pts, papel: somarEvitar||p.furo ? 'evitar' : 'voo'};
+    });
+    if(somarEvitar){ POLS=POLS.concat(novos); }
+    else {
+      POLS=novos;
+      // vários polígonos: o maior é o voo, os outros ficam para o usuário escolher
+      if(POLS.filter(p=>p.papel==='voo').length>1){
+        let iMax=0; POLS.forEach((p,i)=>{ if(p.papel==='voo' && areaAbs(p.pts)>areaAbs(POLS[iMax].pts)) iMax=i; });
+        POLS.forEach((p,i)=>{ if(p.papel==='voo' && i!==iMax) p.papel='nao'; });
+      }
+      RES=null; ELEV=null; SEL=-1;
+    }
+    $('msgArq').innerHTML=`<div class="ok">${f.name}: ${lista.length} polígono(s), convertidos para UTM fuso ${ZONA}S.</div>`;
+    salvar(); renderPols(); renderRelevo(); renderRes();
+  }catch(e){ $('msgArq').innerHTML=`<div class="aviso">Não consegui ler ${f.name}: ${e.message}</div>`; }
+}
+
+// ---------------- geometria ----------------
+const areaSin = r => { let s=0; for(let i=0;i<r.length;i++){const a=r[i],b=r[(i+1)%r.length]; s+=a.E*b.N-b.E*a.N;} return s/2; };
+const areaAbs = r => Math.abs(areaSin(r));
+function dentroAneis(x,y,aneis){
+  let d=false;
+  for(const r of aneis){ for(let i=0,j=r.length-1;i<r.length;j=i++){ const a=r[i], b=r[j];
+    if((a.N>y)!==(b.N>y) && x < (b.E-a.E)*(y-a.N)/(b.N-a.N)+a.E) d=!d; } }
+  return d;
+}
+function segmentos(aneis){ const s=[]; for(const r of aneis) for(let i=0;i<r.length;i++){ const a=r[i], b=r[(i+1)%r.length]; s.push([a.E,a.N,b.E,b.N]); } return s; }
+function distSegs(x,y,segs){
+  let m=Infinity;
+  for(const [x1,y1,x2,y2] of segs){ const dx=x2-x1, dy=y2-y1, L=dx*dx+dy*dy; let t=L?((x-x1)*dx+(y-y1)*dy)/L:0; t=t<0?0:t>1?1:t; const ex=x1+t*dx-x, ey=y1+t*dy-y, d=ex*ex+ey*ey; if(d<m) m=d; }
+  return Math.sqrt(m);
+}
+function aneisVoo(){ return POLS.filter(p=>p.papel==='voo').map(p=>p.pts); }
+function aneisEvitar(){ return POLS.filter(p=>p.papel==='evitar').map(p=>p.pts); }
+function caixa(aneis){ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; aneis.forEach(r=>r.forEach(p=>{x0=Math.min(x0,p.E);y0=Math.min(y0,p.N);x1=Math.max(x1,p.E);y1=Math.max(y1,p.N);})); return {x0,y0,x1,y1}; }
+function centroide(aneis){ let A=0,cx=0,cy=0; aneis.forEach(r=>{ for(let i=0;i<r.length;i++){ const a=r[i], b=r[(i+1)%r.length], c=a.E*b.N-b.E*a.N; A+=c; cx+=(a.E+b.E)*c; cy+=(a.N+b.N)*c; } }); return A? {E:cx/(3*A), N:cy/(3*A)} : null; }
+
+// ---------------- câmera / GSD ----------------
+const CAMS={mini:[6.17,4.49,4000], p4p:[13.2,8.8,5472]};
+function camera(){ const c=$('pCam').value; return c==='custom' ? [num($('cSensor').value), num($('cFocal').value), num($('cPx').value)] : CAMS[c]; }
+function gsd(){ const [s,f,px]=camera(), h=num($('pAlt').value); return h*s/(f*px); }
+function renderGsd(){
+  $('boxCam').style.display = $('pCam').value==='custom' ? 'flex' : 'none';
+  const g=gsd(), lado=num($('pLado').value), px=lado/g;
+  if(!isFinite(g)||g<=0){ $('msgGsd').textContent=''; return; }
+  let t=`GSD ≈ ${br(g*100,1)} cm/px → o alvo de ${br(lado,2)} m ocupa ~${br(px,0)} px na foto.`;
+  if(px<10) t+=' Pouco: voe mais baixo ou use alvo maior.'; else if(px<15) t+=' No limite: dá, mas o centro fica menos nítido.'; else t+=' Bom.';
+  $('msgGsd').textContent=t;
+}
+
+// ---------------- relevo (opcional, online) ----------------
+function chaveArea(){ const v=aneisVoo(); if(!v.length) return ''; const b=caixa(v); return [ZONA,b.x0,b.y0,b.x1,b.y1].map(x=>Math.round(x)).join('|'); }
+function elevEm(x,y){
+  const g=ELEV; if(!g) return NaN;
+  let fx=(x-g.x0)/g.dx, fy=(y-g.y0)/g.dy; fx=Math.max(0,Math.min(g.nx-1.0001,fx)); fy=Math.max(0,Math.min(g.ny-1.0001,fy));
+  const i=Math.floor(fx), j=Math.floor(fy), u=fx-i, v=fy-j, z=(a,b)=>g.z[b*g.nx+a];
+  return z(i,j)*(1-u)*(1-v)+z(i+1,j)*u*(1-v)+z(i,j+1)*(1-u)*v+z(i+1,j+1)*u*v;
+}
+function declEm(x,y){
+  const g=ELEV; if(!g) return NaN; const h=Math.max(g.dx,g.dy);
+  const dzx=(elevEm(x+h,y)-elevEm(x-h,y))/(2*h), dzy=(elevEm(x,y+h)-elevEm(x,y-h))/(2*h);
+  return Math.atan(Math.hypot(dzx,dzy))*180/Math.PI;
+}
+async function buscarRelevo(){
+  const v=aneisVoo(); if(!v.length){ toast('Abra a área do voo primeiro'); return; }
+  if(!navigator.onLine){ $('msgRelevo').innerHTML='<span style="color:#c62828">Sem internet agora. Busque o relevo no escritório; ele fica salvo para usar no campo.</span>'; return; }
+  const b=caixa(v), m=60, x0=b.x0-m, y0=b.y0-m, w=b.x1-b.x0+2*m, h=b.y1-b.y0+2*m;
+  const esp=Math.max(30, Math.sqrt(w*h/400));
+  const nx=Math.max(3,Math.ceil(w/esp)+1), ny=Math.max(3,Math.ceil(h/esp)+1), dx=w/(nx-1), dy=h/(ny-1);
+  const ll=[]; for(let j=0;j<ny;j++) for(let i=0;i<nx;i++) ll.push(utmGeo(x0+i*dx, y0+j*dy, ZONA));
+  const z=[]; $('btnRelevo').disabled=true;
+  try{
+    for(let k=0;k<ll.length;k+=100){
+      $('msgRelevo').textContent=`Buscando altitudes… ${Math.round(100*k/ll.length)}%`;
+      const parte=ll.slice(k,k+100);
+      const url=`https://api.open-meteo.com/v1/elevation?latitude=${parte.map(p=>p[0].toFixed(6)).join(',')}&longitude=${parte.map(p=>p[1].toFixed(6)).join(',')}`;
+      const r=await fetch(url,{cache:'no-store'}); const js=await r.json();
+      if(!r.ok||!js.elevation) throw new Error(js.reason||('HTTP '+r.status));
+      z.push(...js.elevation);
+    }
+    ELEV={chave:chaveArea(), x0, y0, dx, dy, nx, ny, z, data:new Date().toLocaleDateString('pt-BR')};
+    salvar(); renderRelevo(); toast('Relevo salvo no aparelho');
+  }catch(e){ $('msgRelevo').innerHTML=`<span style="color:#c62828">Não consegui buscar o relevo: ${e.message}</span>`; }
+  $('btnRelevo').disabled=false;
+}
+function renderRelevo(){
+  if(ELEV && ELEV.chave!==chaveArea()) ELEV=null;
+  if(!ELEV){ $('msgRelevo').textContent='Sem relevo carregado: os alvos são distribuídos só pela forma da área.'; return; }
+  const zs=ELEV.z.filter(isFinite);
+  $('msgRelevo').textContent=`Relevo salvo (${ELEV.data}): ${br(Math.min(...zs),0)} a ${br(Math.max(...zs),0)} m, ${ELEV.z.length} pontos do Copernicus GLO-90.`;
+}
+
+// ---------------- cálculo dos locais ----------------
+function calcular(manterFixos){
+  const voo=aneisVoo(), evit=aneisEvitar();
+  if(!voo.length){ toast('Marque um polígono como Voo'); return; }
+  const nG=Math.max(1,Math.round(num($('pN').value)||5)), nC=Math.max(0,Math.round(num($('pChk').value)||0));
+  let margem=Math.max(0,num($('pMargem').value)||0); const afast=Math.max(0,num($('pEvitar').value)||0);
+  const declMax=Math.max(6,num($('pDecl').value)||20);
+  const area=voo.reduce((s,r)=>s+areaAbs(r),0) - evit.reduce((s,r)=>s+(dentroAneis(r[0].E,r[0].N,voo)?areaAbs(r):0),0);
+  const b=caixa(voo);
+  let res=Math.max(0.5, Math.sqrt((b.x1-b.x0)*(b.y1-b.y0)/40000)); res=Math.round(res*10)/10;
+  const segV=segmentos(voo), segE=segmentos(evit);
+  // células dentro da área, fora das áreas evitadas
+  const cel=[];
+  for(let y=b.y0+res/2;y<b.y1;y+=res) for(let x=b.x0+res/2;x<b.x1;x+=res){
+    if(!dentroAneis(x,y,voo)) continue;
+    if(evit.length && dentroAneis(x,y,evit)) continue;
+    cel.push({x,y,db:distSegs(x,y,segV), de: segE.length?distSegs(x,y,segE):Infinity});
+  }
+  if(!cel.length){ toast('Área pequena demais'); return; }
+  // margem: reduz até sobrar pelo menos 25% da área
+  const margemPedida=margem;
+  while(margem>0.4 && cel.filter(c=>c.db>=margem).length < 0.25*cel.length) margem/=2;
+  if(margem<=0.4) margem=0;
+  let cand=cel.filter(c=>c.db>=margem && c.de>=afast);
+  if(cand.length < nG+nC) cand=cel.filter(c=>c.db>=margem);
+  if(cand.length < nG+nC) cand=cel;
+  // adequação pelo relevo
+  const temRelevo=!!ELEV;
+  cand.forEach(c=>{
+    c.z=temRelevo?elevEm(c.x,c.y):NaN; c.decl=temRelevo?declEm(c.x,c.y):NaN;
+    let w=1;
+    if(isFinite(c.decl)) w*=Math.min(1,Math.max(0,(declMax-c.decl)/(declMax-5)));
+    if(isFinite(c.de) && c.de<afast*2) w*=0.6+0.4*Math.min(1,(c.de-afast)/Math.max(afast,1));
+    c.w=Math.sqrt(Math.max(w,0));
+  });
+  if(!cand.some(c=>c.w>0)) cand.forEach(c=>c.w=1);
+  let pesoZ=0;
+  if(temRelevo){ const zs=cand.map(c=>c.z).filter(isFinite); const amp=Math.max(...zs)-Math.min(...zs); if(amp>=3) pesoZ=Math.min(0.5*Math.sqrt(area)/amp,15); }
+  // pontos fixos (mantidos)
+  const fixos = manterFixos && RES ? RES.pts.filter(p=>p.fixo) : [];
+  const zz=c=>isFinite(c.z)?c.z:0;
+  const dPt=(c,p)=>Math.sqrt((c.x-p.E)**2+(c.y-p.N)**2+(pesoZ*(zz(c)-(isFinite(p.zz)?p.zz:zz(c))))**2);
+  fixos.forEach(p=>{ p.zz=temRelevo?elevEm(p.E,p.N):NaN; });
+  const cen=centroide(voo)||{E:(b.x0+b.x1)/2,N:(b.y0+b.y1)/2};
+  const dmin=cand.map(c=> fixos.length ? Math.min(...fixos.map(p=>dPt(c,p))) : Math.hypot(c.x-cen.E,c.y-cen.N));
+  const novos=[]; const total=Math.max(0,nG-fixos.filter(p=>p.tipo==='GCP').length)+Math.max(0,nC-fixos.filter(p=>p.tipo!=='GCP').length);
+  const usados=new Set();
+  for(let k=0;k<total && usados.size<cand.length;k++){
+    let melhor=-1, nota=-1;
+    for(let i=0;i<cand.length;i++){ if(usados.has(i)) continue; const s=dmin[i]*cand[i].w; if(s>nota){nota=s;melhor=i;} }
+    if(melhor<0) break;
+    usados.add(melhor); const c=cand[melhor];
+    novos.push({E:c.x,N:c.y,zz:c.z,decl:c.decl});
+    const p={E:c.x,N:c.y,zz:c.z};
+    for(let i=0;i<cand.length;i++){ const d=dPt(cand[i],p); if(d<dmin[i]) dmin[i]=d; }
+  }
+  // monta lista final: fixos + novos GCP + checagem
+  const gFix=fixos.filter(p=>p.tipo==='GCP'), cFix=fixos.filter(p=>p.tipo!=='GCP');
+  const nNovosG=Math.max(0,nG-gFix.length);
+  const lista=[];
+  gFix.forEach(p=>lista.push({E:p.E,N:p.N,fixo:true,tipo:'GCP'}));
+  novos.slice(0,nNovosG).forEach(p=>lista.push({E:p.E,N:p.N,fixo:false,tipo:'GCP',decl:p.decl}));
+  cFix.forEach(p=>lista.push({E:p.E,N:p.N,fixo:true,tipo:'CHK'}));
+  novos.slice(nNovosG).forEach(p=>lista.push({E:p.E,N:p.N,fixo:false,tipo:'CHK',decl:p.decl}));
+  ordenarENomear(lista, cen);
+  RES={pts:lista, area, margem, margemPedida, res, ha:voo.reduce((t,r)=>t+areaAbs(r),0)/1e4};
+  SEL=-1; salvar(); renderRes();
+  $('secRes').scrollIntoView({behavior:'smooth'});
+}
+// numera no sentido horário a partir do norte, GCPs primeiro
+function ordenarENomear(lista, cen){
+  const ang=p=>{ let a=Math.atan2(p.E-cen.E,p.N-cen.N); if(a<0) a+=2*Math.PI; return a; };
+  const meio=p=>Math.hypot(p.E-cen.E,p.N-cen.N);
+  const ord=arr=>{ const rmax=Math.max(1,...arr.map(meio)); return arr.sort((a,b)=>{ const ca=meio(a)<0.25*rmax, cb=meio(b)<0.25*rmax; if(ca!==cb) return ca?1:-1; return ang(a)-ang(b); }); };
+  const g=ord(lista.filter(p=>p.tipo==='GCP')), c=ord(lista.filter(p=>p.tipo!=='GCP'));
+  g.forEach((p,i)=>p.nome='GCP'+String(i+1).padStart(2,'0'));
+  c.forEach((p,i)=>p.nome='CHK'+String(i+1).padStart(2,'0'));
+  lista.length=0; lista.push(...g,...c);
+}
+function atualizarDerivados(){
+  if(!RES) return;
+  RES.pts.forEach(p=>{
+    p.h = ELEV ? elevEm(p.E,p.N) : NaN;
+    if(ELEV) p.decl=declEm(p.E,p.N);
+    const outros=RES.pts.filter(q=>q!==p).map(q=>Math.hypot(q.E-p.E,q.N-p.N));
+    p.viz = outros.length ? Math.min(...outros) : NaN;
+  });
+}
+
+// ---------------- desenho ----------------
+let TRANSF=null;
+function desenhar(){
+  const svg=$('mapa'); const voo=aneisVoo(), evit=aneisEvitar(), todos=POLS.filter(p=>p.papel!=='nao').map(p=>p.pts);
+  if(!voo.length){ svg.innerHTML=''; return; }
+  const b=caixa(todos.concat(RES?[RES.pts]:[]));
+  const W=600, pad=26, w=b.x1-b.x0||1, h=b.y1-b.y0||1;
+  const H=Math.max(260,Math.min(560,Math.round((W-2*pad)*h/w+2*pad)));
+  const s=Math.min((W-2*pad)/w,(H-2*pad)/h), ox=(W-w*s)/2, oy=(H-h*s)/2;
+  TRANSF={s,ox,oy,b,H};
+  const X=E=>ox+(E-b.x0)*s, Y=N=>H-oy-(N-b.y0)*s;
+  const path=r=>'M'+r.map(p=>`${X(p.E).toFixed(1)},${Y(p.N).toFixed(1)}`).join('L')+'Z';
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  let g='';
+  g+=`<path d="${voo.map(path).join(' ')}" fill="#e8f5e9" fill-rule="evenodd" stroke="#2e7d32" stroke-width="2"/>`;
+  if(evit.length) g+=`<path d="${evit.map(path).join(' ')}" fill="#ffcdd2" fill-opacity=".8" stroke="#c62828" stroke-width="1.5" stroke-dasharray="5 3"/>`;
+  // escala
+  const alvoM=(W*0.25)/s, pot=Math.pow(10,Math.floor(Math.log10(alvoM))), passo=[1,2,5,10].map(k=>k*pot).filter(v=>v<=alvoM).pop()||pot;
+  g+=`<g font-size="12" fill="#37474f"><rect x="14" y="${H-22}" width="${passo*s}" height="5" fill="#37474f"/><text x="14" y="${H-28}">${passo>=1000?br(passo/1000,0)+' km':br(passo,0)+' m'}</text>`;
+  g+=`<path d="M${W-24},16 l7,18 l-7,-5 l-7,5z" fill="#37474f"/><text x="${W-28}" y="48">N</text></g>`;
+  if(RES){
+    const r=Math.max(7,Math.min(11,W/60));
+    RES.pts.forEach((p,i)=>{
+      const cx=X(p.E), cy=Y(p.N), cor=p.tipo==='GCP'?'#1565c0':'#ef6c00', sel=i===SEL;
+      g+=`<g data-i="${i}">`;
+      if(sel) g+=`<circle cx="${cx}" cy="${cy}" r="${r+7}" fill="none" stroke="#fbc02d" stroke-width="4"/>`;
+      if(p.tipo==='GCP') g+=`<rect x="${cx-r}" y="${cy-r}" width="${2*r}" height="${2*r}" fill="#fff" stroke="${cor}" stroke-width="${p.fixo?3.5:2}"/><path d="M${cx-r},${cy-r}L${cx+r},${cy+r}M${cx+r},${cy-r}L${cx-r},${cy+r}" stroke="#111" stroke-width="2.2"/>`;
+      else g+=`<circle cx="${cx}" cy="${cy}" r="${r*0.8}" fill="#fff" stroke="${cor}" stroke-width="${p.fixo?3.5:2.5}"/>`;
+      g+=`<text x="${cx+r+3}" y="${cy-r-1}" font-size="13" font-weight="700" fill="${cor}" stroke="#fff" stroke-width="3" paint-order="stroke">${p.nome.replace('GCP','G').replace('CHK','C')}</text></g>`;
+    });
+  }
+  if(GPS){
+    const cx=X(GPS.E), cy=Y(GPS.N);
+    g+=`<circle cx="${cx}" cy="${cy}" r="${Math.max(4,GPS.acc*s)}" fill="#42a5f5" fill-opacity=".18"/><circle cx="${cx}" cy="${cy}" r="6" fill="#1e88e5" stroke="#fff" stroke-width="2"/>`;
+  }
+  svg.innerHTML=g;
+}
+function cliqueMapa(ev){
+  if(!RES||!TRANSF) return;
+  const svg=$('mapa'), pt=svg.createSVGPoint(); pt.x=ev.clientX; pt.y=ev.clientY;
+  const p=pt.matrixTransform(svg.getScreenCTM().inverse());
+  const {s,ox,oy,b,H}=TRANSF, E=b.x0+(p.x-ox)/s, N=b.y0+(H-oy-p.y)/s;
+  // tocou num alvo? seleciona
+  let perto=-1, dm=Infinity; RES.pts.forEach((q,i)=>{ const d=Math.hypot(q.E-E,q.N-N)*s; if(d<dm){dm=d;perto=i;} });
+  if(dm<16){ SEL = SEL===perto ? -1 : perto; renderRes(); return; }
+  if(SEL<0){ toast('Toque primeiro num alvo (no mapa ou na tabela)'); return; }
+  if(!dentroAneis(E,N,aneisVoo())){ toast('Fora da área do voo'); return; }
+  const q=RES.pts[SEL]; q.E=E; q.N=N; q.fixo=true; toast(`${q.nome} movido e fixado`);
+  salvar(); renderRes();
+}
+
+// ---------------- telas ----------------
+function renderPols(){
+  $('secPar').style.display = POLS.length ? 'block' : 'none';
+  $('listaPols').innerHTML = POLS.map((p,i)=>`<div class="pol"><span>${p.nome.replace(/</g,'&lt;')} · ${br(areaAbs(p.pts)/1e4,4)} ha</span><select data-i="${i}"><option value="voo"${p.papel==='voo'?' selected':''}>Voo</option><option value="evitar"${p.papel==='evitar'?' selected':''}>Evitar</option><option value="nao"${p.papel==='nao'?' selected':''}>Ignorar</option></select></div>`).join('');
+  $('listaPols').querySelectorAll('select').forEach(s=>s.onchange=()=>{ POLS[+s.dataset.i].papel=s.value; RES=null; salvar(); renderRelevo(); renderRes(); });
+}
+function renderRes(){
+  const tem=!!RES && RES.pts.length;
+  $('secRes').style.display = POLS.length ? 'block' : 'none';
+  $('secNav').style.display = tem ? 'block' : 'none';
+  ['btnRecalc','btnCsv','btnKml','btnCopiar'].forEach(k=>$(k).disabled=!tem);
+  if(!tem){
+    $('rHa').textContent=br(aneisVoo().reduce((s,r)=>s+areaAbs(r),0)/1e4,2); ['rHaGcp','rViz','rPx'].forEach(k=>$(k).textContent='–');
+    $('rAviso').innerHTML=aneisVoo().length?'<div class="muted">Ajuste os parâmetros e toque em "Calcular locais dos alvos".</div>':'<div class="aviso">Marque um polígono como Voo.</div>';
+    $('tabRes').querySelector('tbody').innerHTML=''; desenhar(); return;
+  }
+  atualizarDerivados();
+  const gcps=RES.pts.filter(p=>p.tipo==='GCP'), vz=RES.pts.map(p=>p.viz).filter(isFinite);
+  $('rHa').textContent=br(RES.ha,2);
+  $('rHaGcp').textContent=br(RES.ha/Math.max(1,gcps.length),2);
+  $('rViz').textContent=vz.length?`${br(Math.min(...vz),0)}–${br(Math.max(...vz),0)}`:'–';
+  $('rPx').textContent=br(num($('pLado').value)/gsd(),0);
+  const av=[];
+  if(RES.margemPedida>0 && RES.margem<RES.margemPedida-0.01) av.push(`Margem reduzida para ${br(RES.margem,1)} m porque a área é estreita.`);
+  if(RES.ha/Math.max(1,gcps.length)>10) av.push(`${br(RES.ha/gcps.length,0)} ha por alvo é pouco controle: o miolo entre os alvos tende a deformar. Use mais alvos ou divida a área em blocos de voo, levando os alvos de um bloco para o outro.`);
+  if(gcps.length<4) av.push('Com menos de 4 alvos não sobra redundância: um alvo ruim estraga o ajuste.');
+  const incl=RES.pts.filter(p=>isFinite(p.decl)&&p.decl>10).map(p=>p.nome);
+  if(incl.length) av.push(`Terreno inclinado em ${incl.join(', ')}: no campo procure um patamar plano perto da posição sugerida.`);
+  if(!ELEV) av.push('Sem relevo: a distribuição considerou só a forma da área. Confira as partes altas e baixas no campo ou busque o relevo (seção 2).');
+  av.push('Confira os pontos na imagem de satélite antes de ir: o app não enxerga árvores, cercas, cava ativa ou acesso.');
+  $('rAviso').innerHTML=av.map((t,i)=>`<div class="${i===av.length-1?'muted':'aviso'}">${t}</div>`).join('');
+  $('tabRes').querySelector('tbody').innerHTML=RES.pts.map((p,i)=>`<tr data-i="${i}" class="${i===SEL?'sel':''}"><td><b style="color:${p.tipo==='GCP'?'#1565c0':'#ef6c00'}">${p.nome}</b></td><td>${br(p.E,1)}</td><td>${br(p.N,1)}</td><td>${isFinite(p.h)?br(p.h,0):'–'}</td><td>${br(p.viz,0)}</td><td style="text-align:center"><input type="checkbox" data-fixo="${i}"${p.fixo?' checked':''}></td><td><button class="sec" data-ir="${i}">Ir</button></td></tr>`).join('');
+  $('tabRes').querySelectorAll('tr[data-i]').forEach(tr=>tr.onclick=ev=>{ if(ev.target.closest('input,button')) return; const i=+tr.dataset.i; SEL=SEL===i?-1:i; renderRes(); if(SEL>=0) toast(`${RES.pts[SEL].nome}: toque no mapa para mover`); });
+  $('tabRes').querySelectorAll('input[data-fixo]').forEach(c=>c.onchange=()=>{ RES.pts[+c.dataset.fixo].fixo=c.checked; salvar(); desenhar(); });
+  $('tabRes').querySelectorAll('button[data-ir]').forEach(bt=>bt.onclick=()=>{ $('navAlvo').value=bt.dataset.ir; atualizaNav(); $('secNav').scrollIntoView({behavior:'smooth'}); if(watchId===null) ligarGps(); });
+  const ant=$('navAlvo').value;
+  $('navAlvo').innerHTML=RES.pts.map((p,i)=>`<option value="${i}">${p.nome}</option>`).join('');
+  if(ant && +ant<RES.pts.length) $('navAlvo').value=ant;
+  desenhar(); atualizaNav();
+}
+
+// ---------------- exportação ----------------
+function linhasExport(){ return RES.pts.map(p=>{ const ll=utmGeo(p.E,p.N,ZONA); return {p, lat:ll[0], lon:ll[1]}; }); }
+function textoCSV(){ return 'Ponto,E,N,Cota,Lat,Lon,Tipo\n'+linhasExport().map(({p,lat,lon})=>[p.nome,p.E.toFixed(3),p.N.toFixed(3),isFinite(p.h)?p.h.toFixed(1):'',lat.toFixed(8),lon.toFixed(8),p.tipo==='GCP'?'controle':'checagem'].join(',')).join('\n')+'\n'; }
+function textoKML(){
+  const pts=linhasExport().map(({p,lat,lon})=>`<Placemark><name>${p.nome}</name><styleUrl>#${p.tipo==='GCP'?'g':'c'}</styleUrl><description>E ${p.E.toFixed(2)} N ${p.N.toFixed(2)} (UTM ${ZONA}S, SIRGAS 2000)</description><Point><coordinates>${lon.toFixed(8)},${lat.toFixed(8)},0</coordinates></Point></Placemark>`).join('\n');
+  const pols=POLS.filter(p=>p.papel!=='nao').map(pl=>`<Placemark><name>${pl.nome.replace(/[<&]/g,'')}</name><styleUrl>#${pl.papel==='voo'?'v':'e'}</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>${pl.pts.concat([pl.pts[0]]).map(q=>{const ll=utmGeo(q.E,q.N,ZONA);return ll[1].toFixed(8)+','+ll[0].toFixed(8)+',0';}).join(' ')}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>GCPs sugeridos</name>
+<Style id="g"><IconStyle><color>ffc06515</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/target.png</href></Icon></IconStyle></Style>
+<Style id="c"><IconStyle><color>ff006cef</color><Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon></IconStyle></Style>
+<Style id="v"><LineStyle><color>ff327d2e</color><width>2</width></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+<Style id="e"><LineStyle><color>ff2828c6</color><width>2</width></LineStyle><PolyStyle><color>402828c6</color></PolyStyle></Style>
+${pols}\n${pts}\n</Document></kml>\n`;
+}
+function copiar(t){ (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copiado')).catch(()=>{ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');toast('Copiado');}catch(e){toast('Não foi possível copiar');} ta.remove(); }); }
+function baixar(nome, txt, tipo){ try{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([(tipo==='text/csv'?'﻿':'')+txt],{type:tipo})); a.download=nome; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500); toast('Arquivo salvo em Downloads'); }catch(e){ copiar(txt); } }
+
+// ---------------- GPS ----------------
+function ligarGps(){
+  if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; GPS=null; $('btnGps').textContent='Ligar GPS'; $('nPrec').textContent='–'; atualizaNav(); desenhar(); return; }
+  if(!navigator.geolocation){ toast('Este aparelho não tem GPS disponível'); return; }
+  $('btnGps').textContent='Desligar GPS';
+  watchId=navigator.geolocation.watchPosition(pos=>{
+    const u=geoUtm(pos.coords.latitude,pos.coords.longitude,ZONA||Math.floor((pos.coords.longitude+180)/6)+1);
+    GPS={E:u[0],N:u[1],acc:pos.coords.accuracy||0}; $('nPrec').textContent=br(GPS.acc,0); atualizaNav(); desenhar();
+  },err=>{ toast('GPS: '+(err.code===1?'permissão negada':'sem sinal')); },{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+}
+function atualizaNav(){
+  const i=+$('navAlvo').value;
+  if(!GPS||!RES||!RES.pts[i]){ $('nDist').textContent='–'; $('nAz').textContent='–'; return; }
+  const p=RES.pts[i], dE=p.E-GPS.E, dN=p.N-GPS.N;
+  $('nDist').textContent=br(Math.hypot(dE,dN),1);
+  $('nAz').textContent=azimTxt(Math.atan2(dE,dN)*180/Math.PI);
+}
+
+// ---------------- eventos ----------------
+$('arq').onchange=e=>{ const f=e.target.files[0]; if(f) abrirArquivo(f,false); e.target.value=''; };
+$('arqEvitar').onchange=e=>{ const f=e.target.files[0]; if(!f) return; if(!POLS.length){ toast('Abra a área do voo primeiro'); e.target.value=''; return; } abrirArquivo(f,true); e.target.value=''; };
+CAMPOS.forEach(k=>$(k).addEventListener('input',()=>{ renderGsd(); salvar(); if(RES && (k==='pLado'||k==='pAlt'||k.startsWith('c')||k==='pCam')) $('rPx').textContent=br(num($('pLado').value)/gsd(),0); }));
+$('pCam').onchange=()=>{ renderGsd(); salvar(); };
+$('btnCalc').onclick=()=>calcular(false);
+$('btnRecalc').onclick=()=>calcular(true);
+$('btnRelevo').onclick=buscarRelevo;
+$('btnSemRelevo').onclick=()=>{ ELEV=null; salvar(); renderRelevo(); renderRes(); };
+$('btnCsv').onclick=()=>baixar('gcps_sugeridos.csv',textoCSV(),'text/csv');
+$('btnKml').onclick=()=>baixar('gcps_sugeridos.kml',textoKML(),'application/vnd.google-earth.kml+xml');
+$('btnCopiar').onclick=()=>copiar(RES.pts.map(p=>`${p.nome}\tE ${p.E.toFixed(2)}\tN ${p.N.toFixed(2)}`).join('\n'));
+$('btnGps').onclick=ligarGps;
+$('navAlvo').onchange=atualizaNav;
+$('mapa').addEventListener('click',cliqueMapa);
+
+// instalação (PWA)
+let promptInst=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); promptInst=e; $('btnInstalar').style.display='block'; });
+$('btnInstalar').onclick=async()=>{ if(!promptInst) return; promptInst.prompt(); await promptInst.userChoice; promptInst=null; $('btnInstalar').style.display='none'; };
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js');
+
+carregar(); renderGsd(); renderPols(); renderRelevo(); renderRes();
+</script>
+</body>
+</html>
